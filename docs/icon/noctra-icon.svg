@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="plate" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1d1d26"/>
+      <stop offset="0.52" stop-color="#0d0d12"/>
+      <stop offset="1" stop-color="#06060a"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.4" cy="0.66" r="0.66">
+      <stop offset="0" stop-color="#d6b27a" stop-opacity="0.22"/>
+      <stop offset="1" stop-color="#d6b27a" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="gold" x1="0.15" y1="0.05" x2="0.88" y2="0.98">
+      <stop offset="0" stop-color="#fbeec6"/>
+      <stop offset="0.34" stop-color="#e3c084"/>
+      <stop offset="0.68" stop-color="#c6964e"/>
+      <stop offset="1" stop-color="#a3743a"/>
+    </linearGradient>
+    <linearGradient id="rim" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.26"/>
+      <stop offset="0.2" stop-color="#ffffff" stop-opacity="0.05"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+    <mask id="crescent">
+      <circle cx="510" cy="510" r="330" fill="#fff"/>
+      <circle cx="660" cy="355" r="300" fill="#000"/>
+    </mask>
+  </defs>
+
+  <rect width="1024" height="1024" rx="228" fill="url(#plate)"/>
+  <rect width="1024" height="1024" rx="228" fill="url(#glow)"/>
+  <rect width="1024" height="1024" fill="url(#gold)" mask="url(#crescent)"/>
+  <circle cx="742" cy="596" r="100" fill="url(#gold)"/>
+  <rect x="4" y="4" width="1016" height="1016" rx="224" fill="none" stroke="url(#rim)" stroke-width="8"/>
+</svg>

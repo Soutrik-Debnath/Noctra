@@ -1,0 +1,1162 @@
+/* ============================================================
+   Noctra — design tokens and base styles
+   Dark, cinematic, generous spacing. Motion is restricted to
+   transform/opacity per the performance budget.
+   ============================================================ */
+
+@import "./fonts/fonts.css";
+@import "./fonts/brand.css";
+
+:root {
+  /* Surfaces */
+  --bg: #0a0a0e;
+  --surface-1: rgba(255, 255, 255, 0.04);
+  --surface-2: rgba(255, 255, 255, 0.07);
+  --hairline: rgba(255, 255, 255, 0.08);
+
+  /* Text. These sit over a blurred album cover, so the floor is set by the brightest cover in the
+     library, not by the darkest. Raised deliberately: "faint" is used for durations and hints that
+     still have to be readable at a glance. */
+  --text: #f7f7fa;
+  --text-dim: rgba(247, 247, 250, 0.82);
+  --text-faint: rgba(247, 247, 250, 0.6);
+  /* Every label in this app can end up over a cover. A tight dark shadow is what buys the
+     contrast without adding another veil over the art. */
+  --text-shadow: 0 1px 2px rgba(0, 0, 0, 0.55), 0 0 18px rgba(0, 0, 0, 0.32);
+
+  /* Liking something is red everywhere else in the world, so it is red here too rather than
+     taking the track's accent — a gold heart on a gold cover says nothing. */
+  --love: #ff3b52;
+  --love-rgb: 255 59 82;
+
+  /* Accent is overwritten per track from JS (--accent-rgb as "r g b").
+     Phase 4 replaces the hardcoded value with an extracted palette. */
+  --accent-rgb: 214 178 122;
+  --accent: rgb(var(--accent-rgb));
+  --accent-soft: rgb(var(--accent-rgb) / 0.35);
+  /* Dark ink on the accent fill. A white glyph over an accent picked from a
+     bright cover is this app's most reliable contrast failure. */
+  --on-accent: #08080c;
+
+  /*
+     Accent for TEXT, as opposed to accent for fills.
+
+     The accent is sampled from the cover, so its luminance is arbitrary — a deep red, a near-black
+     teal. As a fill that is fine, because the glyph sitting on it is dark ink (`--on-accent`). As a
+     label it is a contrast gamble that no amount of backdrop dimming can win, because dimming the
+     backdrop dims the accent's own contribution to it right along with everything else. This showed
+     up as the active list row measuring 2.38:1 on a red cover: red text, red-lit maroon behind it.
+
+     Mixing toward white keeps the hue — a red cover still reads red — while putting a floor under the
+     luminance. 58% is chosen so the darkest plausible accent still clears 4.5:1 on the app's
+     near-black surfaces.
+  */
+  --accent-text: color-mix(in oklab, var(--accent) 58%, #fff);
+
+  /*
+     Accent for a LIT CONTROL, which is a different job from accent for text.
+
+     `--accent-text` is floored at 4.5:1 because it paints body copy. A 20px glyph is a non-text UI
+     component and only has to clear 3:1, and spending that headroom is the whole point: at 58% white a
+     muted cover accent lands within a hair of the white ink, so shuffle-on and shuffle-off looked the
+     same and the owner could not tell the states apart at all. 78% keeps the hue readable as a colour
+     while staying bright enough for the darkest plausible accent, and the off state drops to 0.5 alpha
+     below so the two are separated by lightness as well as by hue.
+  */
+  --accent-lit: color-mix(in oklab, var(--accent) 78%, #fff);
+
+  /* Solid raised card — the default content surface. Large translucent panels
+     over a busy cover read as frosted plastic; a solid film with a hairline
+     reads as built. */
+  --card: rgba(255, 255, 255, 0.06);
+  --card-hover: rgba(255, 255, 255, 0.1);
+  --card-border: rgba(255, 255, 255, 0.09);
+  --card-shadow: 0 8px 28px rgba(0, 0, 0, 0.28);
+
+  /* Rhythm */
+  --radius-art: 14px;
+  --radius-panel: 18px;
+  --radius-float: 28px;
+  --radius-pill: 999px;
+  --gutter: 32px;
+  /* 88px packed its content against the pill's own floor, so the scrubber read as resting on the
+     bottom edge of the glass. 100px gives it air without turning the bar into a slab — the extra 4px
+     over 96 exists only so the transport-to-scrubber gap can grow without eating the floor again. */
+  --miniplayer-h: 100px;
+  --sidebar-w: 232px;
+
+  /*
+     Liquid glass, measured off the reference rather than guessed.
+
+     Three things the reference capture settled that arguing from taste had not:
+
+     - The pane is *neutral*. Over a saturated cover its interior reads sat 0.05 while the art behind
+       it is far more chromatic. A heavy blur plus a light veil pulls colour toward grey; it does not
+       amplify it. The token here used to run `saturate(2.15)`, which is why the rail looked like a
+       red slab instead of a pane of glass.
+     - The colour you see is the *content*, smeared. The reference interior measured #172F2F — a real
+       teal — because a teal cover sat behind that part of the pane. So the blur does the colouring
+       and nothing layered over it should fight it.
+     - The rim is not one line, it is a *band*. The edge concentrates the backdrop into a soft bright
+       band about 8-10px deep at this window size, lifting roughly +24/255 over the interior on the
+       sides and +40 along the top, with a light bloom hugging the outside.
+
+     Blur is deliberately enormous relative to the pane. At ~5-7% of the viewport width no detail
+     survives, which is what makes it read as a lens rather than as translucent plastic — and it is
+     the averaging step that stops a vivid cover bleeding its hue into every surface on screen.
+
+     Still restricted to bounded surfaces: a live full-window `backdrop-filter` will not hold frame
+     rate on integrated graphics, so the window background stays a pre-blurred bitmap.
+  */
+  --glass-blur: 72px;
+  /*
+     This number multiplies one in another file, which is why it keeps getting "fixed" wrong.
+
+     `services/artwork/blur.ts` already renders the backdrop bitmap at `saturate(2.0)`. The pane's
+     `backdrop-filter` then re-saturates whatever it is laid over, so the effective chroma of a glass
+     surface is 2.0 x this. At 1.5 that is 3.0 — invisible on a muted cover, and on a saturated one
+     (a red film soundtrack, say) the sidebar stops being a pane of glass and becomes a red slab,
+     which is the failure this token has now caused twice. Keep the product near neutral: anything
+     above ~1.35 here has to be paid for by lowering SATURATION in blur.ts, not by itself.
+  */
+  --glass-saturate: 1.28;
+  --glass-brighten: 0.72;
+  /* The veil is bracketed by two failures that were each measured, not by taste.
+     At 0.15 it is a film of paint: the pane flattens to one uniform grey, the backdrop's colour is
+     eaten, and the pill reads as a dead capsule — the pass the owner rejected. Dropped to 0.07 the
+     colour finally came through, but Noctra's bar usually floats over the *empty* part of the
+     backdrop rather than over artwork the way the reference's does, so the pane had no body at all
+     and only measured +9 above the window behind it. 0.14 puts the interior lift back near the
+     reference's +27 while leaving enough transparency for a bright cover to show through. */
+  --glass-fill: rgba(200, 210, 216, 0.14);
+  /* Four layers, because a single hairline is what made the first pass read as a grey capsule with a
+     stroke around it rather than as glass:
+       rim        the crisp line the eye reads as the glass surface
+       lens       the wide soft band — this is the actual refraction, and the thing that was missing
+       dispersion a cool fringe just inside, where a real edge splits the light
+       lip        a dark inner shadow along the bottom, which is the pane's thickness
+     They are all inset box-shadows at the same position, so they STACK — `1 - (1-a)(1-b)...`. Two of
+     them once composited to a 197-luminance hairline and blew out the text beside the bar; see
+     BUG-042. Re-measure the rim lift after touching any of the four, not just the one you edited. */
+  --glass-rim: rgba(255, 255, 255, 0.11);
+  --glass-lens: rgba(255, 255, 255, 0.055);
+  --glass-dispersion: rgba(158, 205, 255, 0.07);
+  --glass-specular: rgba(255, 255, 255, 0.06);
+  --glass-lip: rgba(0, 0, 0, 0.34);
+  --glass-bloom:
+    0 0 0 1px rgba(255, 255, 255, 0.05),
+    0 0 30px rgba(255, 255, 255, 0.06);
+  --glass-shadow: 0 26px 64px -22px rgba(0, 0, 0, 0.72);
+  --glass-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate))
+    brightness(var(--glass-brighten));
+
+  /* A shallower, clearer variant for glass laid directly on artwork, where a heavy blur would eat
+     the picture the user is looking at. */
+  --glass-filter-clear: blur(34px) saturate(1.12) brightness(0.9);
+
+  /* How far a floating capsule sits in from the edge of the window, and the gap it leaves to its
+     neighbours. The reference detaches every glass surface — nothing is flush to an edge. */
+  --float-inset: 14px;
+
+  /* The bar's own bottom inset is deliberately larger than the other three edges. It is the only
+     surface that sits against the taskbar, and at 14px the capsule looked like it was resting on the
+     chrome rather than floating above it. The rail keeps the shared 14px: it floats against the
+     window's left and top, where there is nothing to collide with. */
+  --float-inset-bottom: 20px;
+
+  /* Outer box each floating pane actually occupies, and the padding content needs to come to rest
+     clear of it. The scroll areas run to the window edge underneath these — see the clearance rule
+     further down — because glass with nothing behind it is just a coloured rectangle. */
+  --rail-w: calc(var(--sidebar-w) + var(--float-inset) * 2);
+  --bar-h: calc(var(--miniplayer-h) + var(--float-inset-bottom) + var(--float-inset));
+  --pad-start: calc(var(--rail-w) + var(--gutter));
+  --pad-bottom: calc(var(--bar-h) + var(--gutter));
+
+  /* Extra darkness the user asks for on top of the automatic per-cover veil. 0 by default; the
+     Settings page owns it and `settings.apply()` writes it. */
+  --backdrop-dim: 0;
+
+  /* Motion — long and restrained on ambient things, snappy on controls. 140ms on
+     a button is what makes it feel like it is answering you. */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  /* For words changing size, not for boxes moving. `--ease-out` covers most of its distance in the
+     first quarter of its time, which is right for a panel arriving and wrong for a lyric line
+     growing: the text leaps to nearly full size and then crawls the rest of the way, and that
+     two-speed read is most of what made the sung line look cheap. This one leaves the ground slowly
+     and lands slowly, so the size change reads as one motion. */
+  --ease-lyric: cubic-bezier(0.32, 0, 0.24, 1);
+  --tap: 140ms;
+  --fade-track: 700ms;
+
+  /*
+     ---- Scale tokens ----
+
+     These exist because the app had drifted: 21 distinct font sizes with half-pixel steps, 26
+     distinct box-shadows and 18 distinct transition durations, all chosen per-component by eye.
+     That drift is most of what made the interface read as assembled rather than designed — nobody
+     notices a shadow is 28px instead of 26px, they notice that no two surfaces sit at the same
+     height. The values below are rounded onto real scales; the half-pixel sizes collapse to
+     integers, which is invisible per-instance and legible as a whole.
+  */
+
+  /* Type. ~1.2 ratio from 10, which is the density a media library needs. Body copy never goes
+     below --fs-sm. */
+  --fs-2xs: 10px; /* uppercase eyebrows, the corner credits on artwork */
+  --fs-xs: 11px; /* durations, chips, dense metadata */
+  --fs-sm: 12px; /* hints and secondary lines */
+  --fs-base: 13px; /* row titles, control labels */
+  --fs-md: 14px; /* default UI text */
+  --fs-lg: 16px; /* subheads */
+  --fs-xl: 18px; /* panel titles */
+  --fs-2xl: 22px; /* section titles */
+  --fs-3xl: 28px; /* page and now-playing titles */
+  --fs-4xl: 34px; /* display */
+
+  /* Spacing. 4px rhythm; the odd 6 and 10 are the two steps that were genuinely needed between
+     them and are now named rather than improvised. */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 20px;
+  --sp-6: 24px;
+  --sp-8: 32px;
+  --sp-10: 40px;
+  --sp-12: 48px;
+  --sp-16: 64px;
+
+  /*
+     Elevation. Four tiers plus an accent halo, and the rule is that a surface's tier says how far
+     it is from the page: rows and chips rest, cards lift, menus and popovers float above content,
+     modals and the fullscreen sheets sit above everything.
+
+     Every one of these keeps `-N` spread on the vertical so the shadow reads as coming from a wide,
+     soft source rather than a hard card edge, which is the difference between "lit" and "stuck on".
+  */
+  --elev-1: 0 1px 2px rgba(0, 0, 0, 0.35);
+  --elev-2: 0 4px 14px -4px rgba(0, 0, 0, 0.5);
+  --elev-3: 0 12px 32px -10px rgba(0, 0, 0, 0.62);
+  --elev-4: 0 26px 64px -18px rgba(0, 0, 0, 0.72);
+  --elev-glow: 0 0 26px -6px rgb(var(--accent-rgb) / 0.5);
+
+  /* The bloom a bare glyph wears when it is switched on. A token rather than two copies because the
+     bar's queue and sleep buttons report state through `.lit` while everything else uses `.orb-on`, and
+     the two had to be kept identical by hand. Space-separated: `filter` is not a comma list, and a comma
+     parses into the CSSOM but is invalid at computed-value time, silently turning the whole declaration
+     into `none`.
+
+     Pulled back at the owner's request. The wide halo was the loud one, so it lost both reach and
+     alpha hardest; the tight rim stayed comparatively intact because that is what keeps the letterform
+     edged rather than what makes the control shout. The on state still reads without it, because it is
+     carried by lightness first — dim ink at rest, `--accent-lit` when on. */
+  --orb-lit-glow:
+    drop-shadow(0 0 2px rgb(var(--accent-rgb) / 0.6))
+    drop-shadow(0 0 8px rgb(var(--accent-rgb) / 0.4))
+    drop-shadow(0 0 16px rgb(var(--accent-rgb) / 0.22));
+
+  /* Duration. Named by role, not by number, so a component says what it is doing rather than how
+     long it takes. `--tap` and `--fade-track` above stay as the historical aliases. */
+  --dur-press: 120ms;
+  --dur-hover: 180ms;
+  --dur-reveal: 260ms;
+  --dur-panel: 420ms;
+  --dur-ambient: 700ms;
+  /* The sung line changing size, and the depth of field moving with it. Paired with `--ease-lyric`;
+     the two lyric surfaces read that pairing rather than picking their own numbers. */
+  --dur-lyric: 460ms;
+
+  /* The focus ring. Keyboard users currently get a visible ring in 8 of 29 style-bearing files,
+     because every one that wanted one hand-rolled it. One token, one global rule below.
+     Drawn as an `outline`, not a `box-shadow`, so it never competes with a surface's elevation. */
+  --focus-ring: rgb(var(--accent-rgb) / 0.9);
+
+  /*
+     Two faces, one per role.
+
+     `--font-display` is Bricolage Grotesque: it carries an optical-size axis, so its letterforms are
+     drawn to change between 12px and 96px. That is a display face — use it where type is the subject
+     (Now Playing title, page and section headings, large stat numerals), never for chrome.
+
+     `--font-ui` is Sora: a steady geometric sans with no optical axis, i.e. built to look identical at
+     every size, which is what sidebar labels, chips, buttons, track rows and lyric lines need.
+
+     The stacks below each are fallback chains, not alternatives — "Inter" once sat first here and was
+     never actually loaded, which silently dropped the whole app into Segoe UI. Only families with a
+     matching @font-face may lead a stack.
+  */
+  --font-display: "Bricolage Grotesque", "Sora", ui-sans-serif, system-ui, sans-serif;
+  --font-ui: "Sora", ui-sans-serif, system-ui, -apple-system, "Segoe UI Variable Text", "Segoe UI",
+    sans-serif;
+  /* The "Noctra" lockup only. A wordmark has to read as a logo rather than as a label, so it is set
+     against both UI faces rather than with them — see fonts/brand.css for the three candidates and why
+     a serif is the right kind of contrast here. */
+  --font-brand: "Bodoni Moda", "Italiana", "Syne", var(--font-display);
+  font-family: var(--font-ui);
+
+  color-scheme: dark;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+  /* Desktop app chrome: no text cursor on labels, no accidental selection */
+  user-select: none;
+  text-shadow: var(--text-shadow);
+}
+
+h1,
+h2,
+h3,
+p {
+  margin: 0;
+}
+
+/* Headings are the display role, so they take Bricolage globally rather than per view — every screen
+   already uses h1/h2 semantically, and eight separate edits is eight places to drift. Negative
+   tracking is required: Bricolage is drawn with looser spacing than Sora, and at display sizes the
+   default reads as gappy. `p` is deliberately excluded even though it shares the reset above. */
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
+  letter-spacing: -0.022em;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+input {
+  font: inherit;
+}
+
+/*
+   One focus ring for the whole app.
+
+   Previously 8 of 29 style-bearing files had their own, which means most controls were unreachable
+   by keyboard as far as the eye was concerned. `:focus-visible` rather than `:focus` so clicking a
+   button does not leave a ring on it — the ring is for people who arrived by Tab.
+*/
+:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+/* Range inputs draw their own thumb, and a ring around the whole track is noise; put it on the
+   thumb where the keyboard actually is. */
+input[type="range"]:focus-visible {
+  outline: none;
+}
+input[type="range"]:focus-visible::-webkit-slider-thumb {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+/* Nothing in this app is a text-editing surface except the search and rename fields, and a ring on
+   those competes with their own focus border. */
+input[type="text"]:focus-visible,
+input[type="search"]:focus-visible {
+  outline: none;
+}
+
+/* Scrollbars stay out of the way in a dark app */
+::-webkit-scrollbar {
+  width: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.14);
+  border-radius: var(--radius-pill);
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.26);
+  background-clip: content-box;
+}
+
+/* The duplicate bare `:focus-visible` that used to sit here — `outline: 2px solid var(--accent)`,
+   `outline-offset: 3px`, `border-radius: 4px` — was removed. Same selector and same specificity as
+   the tokenised rule above, but later in source order, so it silently won: `--focus-ring` never
+   applied to ordinary controls, and the `border-radius` re-shaped whatever you tabbed to. See
+   BUG-051. */
+
+/* ============================================================
+   Glass surfaces
+   No gradient fills anywhere in here. The rim is drawn with inset box-shadows,
+   which read as the thickness of a real pane; a gradient overlay reads as paint
+   on a rectangle. Every surface carries a full-perimeter rim plus a brighter
+   top arc, because the reference catches light on all four edges and only
+   *more* on the top.
+   ============================================================ */
+
+.glass {
+  background-color: var(--glass-fill);
+  backdrop-filter: var(--glass-filter);
+  -webkit-backdrop-filter: var(--glass-filter);
+  border: none;
+  box-shadow:
+    var(--glass-shadow),
+    var(--glass-bloom),
+    inset 0 0 0 1px var(--glass-rim),
+    inset 0 0 18px var(--glass-lens),
+    inset 0 0 4px var(--glass-dispersion),
+    inset 0 1.5px 0 var(--glass-specular),
+    inset 0 -12px 18px -14px var(--glass-lip);
+}
+
+/* A stronger variant for small floating things, where the refraction is the point. */
+.glass-strong {
+  background-color: rgba(208, 217, 222, 0.14);
+  backdrop-filter: blur(calc(var(--glass-blur) * 1.35)) saturate(var(--glass-saturate))
+    brightness(var(--glass-brighten));
+  -webkit-backdrop-filter: blur(calc(var(--glass-blur) * 1.35)) saturate(var(--glass-saturate))
+    brightness(var(--glass-brighten));
+  border: none;
+  box-shadow:
+    0 20px 52px -20px rgba(0, 0, 0, 0.72),
+    var(--glass-bloom),
+    inset 0 0 0 1px var(--glass-rim),
+    inset 0 0 16px var(--glass-lens),
+    inset 0 0 4px var(--glass-dispersion),
+    inset 0 1.5px 0 var(--glass-specular),
+    inset 0 -10px 16px -12px var(--glass-lip);
+}
+
+/* Bounded card: sits inside a view rather than spanning it. */
+.glass-panel {
+  background-color: rgba(200, 210, 216, 0.1);
+  backdrop-filter: blur(calc(var(--glass-blur) * 0.7)) saturate(var(--glass-saturate))
+    brightness(var(--glass-brighten));
+  -webkit-backdrop-filter: blur(calc(var(--glass-blur) * 0.7)) saturate(var(--glass-saturate))
+    brightness(var(--glass-brighten));
+  border: none;
+  border-radius: var(--radius-panel);
+  box-shadow:
+    0 14px 40px -20px rgba(0, 0, 0, 0.6),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.09),
+    inset 0 0 14px rgba(255, 255, 255, 0.05),
+    inset 0 1.5px 0 var(--glass-specular),
+    inset 0 -8px 14px -11px rgba(0, 0, 0, 0.28);
+}
+
+/* Pill-shaped input / chip / secondary button surface. The lens band is deliberately shallow here:
+   these are 22-38px tall, and an 18px inset glow from both sides would meet in the middle and turn
+   the whole chip into the highlight. */
+.glass-pill {
+  background-color: rgba(200, 210, 216, 0.12);
+  backdrop-filter: blur(calc(var(--glass-blur) * 0.55)) saturate(var(--glass-saturate))
+    brightness(var(--glass-brighten));
+  -webkit-backdrop-filter: blur(calc(var(--glass-blur) * 0.55)) saturate(var(--glass-saturate))
+    brightness(var(--glass-brighten));
+  border: none;
+  border-radius: var(--radius-pill);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.12),
+    inset 0 0 8px rgba(255, 255, 255, 0.06),
+    inset 0 1.5px 0 var(--glass-specular),
+    inset 0 -5px 9px -8px rgba(0, 0, 0, 0.3);
+}
+
+/* ============================================================
+   Floating panes
+   Every glass surface in the reference is detached: it floats inside the
+   window with a visible gap on all sides, and the content scrolls *behind* it.
+   A flush pane edge-to-edge cannot show that, because there is nothing for it
+   to refract at the boundary.
+
+   So the rail and the mini-player are taken out of the flow and positioned
+   against the window, the content column fills the whole window underneath
+   them, and the clearance each view needs is applied here rather than in every
+   view. The descendant selector is deliberate: it outranks the per-component
+   `padding` shorthand that Svelte scopes onto each view root, which would
+   otherwise win on source order and leave the last row parked under the bar.
+
+   The `:not(.panel)` is not decoration. The queue drawer is also a direct child of `.content`, but it
+   is absolutely positioned against the window edge, so handing it the rail's width as left padding ate
+   292px of its 380px and wrapped its text into an 88px column — one word per line, top to bottom. Only
+   children that are actually in the flow need clearance from the floating chrome.
+   ============================================================ */
+
+.shell .frame .content > :not(.panel) {
+  padding-left: var(--pad-start);
+  padding-bottom: var(--pad-bottom);
+}
+
+/* ============================================================
+   Controls
+   Two shapes, not one. `.orb` is the thin outlined glass ring, used where the
+   reference shows a row of icons over the artwork. `.orb-bare` is a plain glyph
+   with no ring at all, used for the transport — matching
+   docs/references/02-lyrics-fullscreen-hover-controls.png, where the play row is
+   bare glyphs and only the top row is circled. Putting a ring on all five made
+   the row read as a cluster of identical bubbles.
+
+   Sizes are modifiers on one class; emphasis is a separate axis, because
+   a secondary control and the primary transport share a shape but must not
+   share a weight.
+   ============================================================ */
+
+.orb {
+  --orb-size: 46px;
+  display: grid;
+  place-items: center;
+  position: relative;
+  isolation: isolate;
+  flex: none;
+  width: var(--orb-size);
+  height: var(--orb-size);
+  border-radius: 50%;
+  color: #fff;
+  /*
+     Light neutral veil, not a dark disc.
+
+     This was `rgba(10, 10, 15, 0.42)` — a smoked-glass button — and it is the single biggest reason
+     the control row read as ordinary rather than as glass. Real glass does not darken what is behind
+     it; it thins the colour, bends the light and gathers it at the edges. So: the same neutral pane
+     veil every other glass surface in the app uses, a strong catch-light along the top inner edge,
+     and light pooling at the *bottom* inner edge, which is where a lens actually focuses what comes
+     through it. That bottom band is the detail that sells it; without it the disc is just a pale
+     circle.
+  */
+  background-color: var(--glass-fill);
+  backdrop-filter: var(--glass-filter-clear);
+  -webkit-backdrop-filter: var(--glass-filter-clear);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.6),
+    inset 0 -9px 12px -10px rgba(255, 255, 255, 0.5),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.05),
+    var(--elev-2);
+  transition:
+    transform 200ms var(--ease-out),
+    background-color 200ms var(--ease-out),
+    border-color 200ms var(--ease-out),
+    box-shadow 260ms var(--ease-out),
+    color 200ms var(--ease-out),
+    opacity 200ms var(--ease-out);
+}
+
+/* No `::before` sheen on the orbs. A gradient dome over a button fill is exactly
+   the painted look the owner objected to; the catch-light is the inset top edge
+   in the box-shadow above, which is what a real glass rim does. */
+
+.orb:hover:not(:disabled) {
+  transform: scale(1.14);
+  background-color: rgba(236, 244, 248, 0.28);
+  border-color: rgba(255, 255, 255, 0.95);
+  /* The bloom, and note what carries it: a white catch-light ring and an outer white halo, with the
+     accent glow behind them. The reference orb does not read as glowing because the fill brightens —
+     it reads as glowing because light leaks past the rim. The old hover had only the accent layer,
+     which tinted the halo without ever making the ring itself luminous. */
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.85),
+    inset 0 0 14px rgba(255, 255, 255, 0.22),
+    0 0 0 1px rgba(255, 255, 255, 0.34),
+    0 8px 30px -8px rgba(0, 0, 0, 0.7),
+    0 0 24px 2px rgba(255, 255, 255, 0.3),
+    0 0 48px -2px rgb(var(--accent-rgb) / 0.62);
+}
+
+.orb:active:not(:disabled) {
+  transform: scale(0.95);
+  /* Pressed is brighter, not darker — glass concentrates light as it is pushed in. */
+  background-color: rgba(240, 246, 250, 0.3);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.75),
+    inset 0 -9px 12px -10px rgba(255, 255, 255, 0.65),
+    0 0 34px -2px rgb(var(--accent-rgb) / 0.7);
+}
+
+.orb:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.orb-sm {
+  --orb-size: 38px;
+}
+
+.orb-lg {
+  --orb-size: 56px;
+}
+
+/* Transport glyphs: no ring, no fill, no blur. Just the glyph and a bloom when pointed at. */
+.orb-bare {
+  --orb-size: 52px;
+  background-color: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border-color: transparent;
+  box-shadow: none;
+  color: var(--text);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+}
+
+.orb-bare:hover:not(:disabled) {
+  transform: scale(1.1);
+  /* No fill and no coloured halo. The plate is the "circle over every button" that has been rejected
+     repeatedly, and the accent bloom reads as a cheap glow rather than a control responding. Brighter
+     ink plus a small lift is enough to show that a button is live. */
+  background-color: transparent;
+  border-color: transparent;
+  color: #fff;
+  box-shadow: none;
+}
+
+.orb-bare:active:not(:disabled) {
+  transform: scale(0.92);
+}
+
+/* Sitting on the artwork, bare glyphs have no plate to protect them. On a light sleeve — a white
+   album cover is not rare — white ink simply disappears, so the row switches to dark ink. Scoped to
+   `.art-zone` so the same controls on the dark mini-player bar keep their light ink. */
+html[data-art-light] .art-zone .orb-bare {
+  color: #0c0c11;
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.5);
+}
+
+html[data-art-light] .art-zone .orb-bare:hover:not(:disabled) {
+  /* Brighter ink only — the same rule as everywhere else. A white plate behind the glyph is the
+     circle this app keeps being told to drop. */
+  background-color: transparent;
+  color: #000;
+}
+
+/*
+   The primary transport action, as a bare glyph.
+
+   This used to be a filled accent disc with dark ink on it, on the reasoning that a white glyph over
+   a bright accent is the contrast failure this app keeps hitting — and that reasoning was sound for
+   the *fill*, which is why `--on-accent` still exists. But the disc read as cheap against the rest of
+   the transport, and the owner asked twice for the reference's bare two-bars-and-triangle. Bare
+   glyphs cannot fail on contrast the way a filled disc can, because there is no surface to choose
+   ink against; the glow below is what keeps it feeling like the primary control.
+*/
+.orb-primary {
+  --orb-size: 54px;
+  color: #fff;
+  background-color: transparent;
+  border-color: transparent;
+  box-shadow: none;
+  transition:
+    transform 200ms var(--ease-out),
+    filter 200ms var(--ease-out),
+    text-shadow 200ms var(--ease-out),
+    /* Not inherited from `.orb`: this block replaces the whole transition list, so without this the
+       primary glyph snaps between lit and dimmed instead of easing with the rest of the row. */
+    opacity 200ms var(--ease-out);
+}
+
+.orb-primary:hover:not(:disabled) {
+  transform: scale(1.12);
+  /* These three are the whole point of this rule. `.orb-bare:hover` resets them and that is why the
+     four secondary glyphs never showed a plate; the primary rule only set `transform`, so
+     `background-color`, `border-color` and `box-shadow` fell through to `.orb:hover:not(:disabled)`
+     — which paints the glass disc, the white catch-light ring and a 48px accent bloom. The circular
+     glow was therefore appearing on the play button alone, and only on hover, which is why it survived
+     every previous pass at this. */
+  background-color: transparent;
+  border-color: transparent;
+  box-shadow: none;
+  color: #fff;
+}
+
+.orb-primary:active:not(:disabled) {
+  transform: scale(0.94);
+  background-color: transparent;
+  border-color: transparent;
+  box-shadow: none;
+}
+
+/* A control that is on, as distinct from one being hovered. */
+.orb-on {
+  /* The glyph is accent-on-accent-tint here, and sleeve-tinted glass under it, so the raw hue is the
+     same 2.33:1 trap the active row title was. The fill and ring keep the real accent; only the ink
+     is floored. */
+  color: var(--accent-text);
+  border-color: rgb(var(--accent-rgb) / 0.7);
+  background-color: rgb(var(--accent-rgb) / 0.14);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.26),
+    0 0 24px -4px rgb(var(--accent-rgb) / 0.6);
+}
+
+/* The sleeve-sized favourite has the same problem in a worse form: it is a large white shape sitting
+   directly on the cover, so on a pale sleeve the outline and the filled state both vanish into it.
+   This used to be solved by flipping the ink to #0c0c11 (and #000 on hover), which is the owner's
+   standing prohibition — the heart is never dark on any surface. Separation now comes from a tight
+   dark contour drawn around the white shape, which is what keeps it legible on a cream sleeve
+   without ever letting the glyph itself go black. */
+html[data-art-light] .art-zone :is(.love, .love.lit) {
+  color: #fff;
+  filter:
+    drop-shadow(0 0 1.5px rgba(6, 6, 10, 0.92))
+    drop-shadow(0 2px 12px rgba(6, 6, 10, 0.55));
+}
+
+html[data-art-light] .art-zone .love:hover:not(:disabled) {
+  color: #fff;
+  filter:
+    drop-shadow(0 0 1.5px rgba(6, 6, 10, 0.95))
+    drop-shadow(0 2px 14px rgba(6, 6, 10, 0.6))
+    drop-shadow(0 0 22px rgb(var(--love-rgb) / 0.4));
+}
+
+/* A bare glyph carries its "on" state in the ink and in light, and in nothing else. The 4px dot that
+   used to sit under shuffle and repeat is gone: the owner read it as cheap, and it was a third signal
+   on a control that already had two. The accent ring and tinted plate from `.orb-on` still do not
+   belong here — on a borderless button they redraw the circle around the glyph that this app has been
+   told to drop repeatedly. */
+
+/* A toggle at rest is dimmer than a control that has no state to report. Prev and next carry no
+   `aria-pressed` and so keep full ink; every bare button that does report one gets this off state, which
+   is what makes the lit state read as a change in lightness as well as in hue. */
+.orb-bare[aria-pressed="false"] {
+  color: rgba(247, 247, 250, 0.5);
+}
+
+.orb-bare.orb-on {
+  border-color: transparent;
+  background-color: transparent;
+  box-shadow: none;
+  color: var(--accent-lit);
+  /* Three layers: a tight near-opaque rim keeps the letterform edged, a mid field carries the hue, and
+     a wide halo is what makes the control read as switched on from across the bar. See `--orb-lit-glow`
+     for why it is a token and why the value is space-separated. */
+  filter: var(--orb-lit-glow);
+}
+
+/* `.orb-bare:hover` outranks the rule above, so hovering an active control used to repaint it white —
+   precisely the moment the owner looks to check whether it is on. Hover keeps the lift; the colour no
+   longer trades away for it. */
+.orb-bare.orb-on:hover:not(:disabled) {
+  color: var(--accent-lit);
+}
+
+/* "Repeat N times" is the one state a colour cannot express, so it keeps a label. It used to reuse the
+   on-state dot's positioning; that rule is gone, so the geometry is its own now. */
+.orb-bare.orb-times::after {
+  content: attr(data-times);
+  position: absolute;
+  bottom: 2px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: var(--fs-2xs);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.01em;
+}
+
+/* Liked is red ink with no container. The ring around a liked heart read as a
+   warning badge rather than a state. */
+.orb-love {
+  color: var(--love);
+  border-color: transparent;
+  background-color: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: none;
+}
+
+.orb-love:hover:not(:disabled) {
+  background-color: rgb(var(--love-rgb) / 0.16);
+  border-color: transparent;
+  box-shadow: 0 0 22px -4px rgb(var(--love-rgb) / 0.6);
+}
+
+/* ============================================================
+   The liked heart, and the way it comes apart.
+
+   Global rather than scoped because the fullscreen view and the desktop mini card both need it,
+   and the last time two surfaces each had their own copy of a heart they drifted until the owner
+   reported them as different features. Sizing stays with each caller; only the fracture, the
+   fade and the glow are shared.
+   ============================================================ */
+
+/* Liked lights, and on the sleeve it lights WHITE — following the reference, where the liked
+   favourite is a solid white heart and the difference from unliked is *fill*, not hue. This is a
+   deliberate override of D-036's "liked is red", and it is scoped to the big heart on purpose:
+   the small `.orb-love` glyph in the mini-player bar, library rows, the queue and the context menu
+   all stay red, because those are compact controls where a hue change is the only thing that can
+   carry the state at 18px.
+   The glow is two drop-shadows on the glyph itself rather than a box-shadow on the button, because
+   the button is a circle and a box-shadow would draw the ring this app has been told to drop
+   repeatedly. */
+.heart-lit {
+  color: #fff;
+  filter:
+    drop-shadow(0 0 12px rgba(255, 255, 255, 0.45))
+    drop-shadow(0 0 34px rgba(255, 255, 255, 0.22));
+}
+
+.heart-half {
+  grid-area: 1 / 1;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+}
+
+/* At rest the two halves overlap by 1% rather than meeting exactly, so antialiasing cannot leave a
+   hairline seam down the middle of a heart that is not breaking. */
+.heart-half.left {
+  clip-path: inset(0 49% 0 0);
+}
+
+.heart-half.right {
+  clip-path: inset(0 0 0 49%);
+}
+
+/*
+   The fracture, as two complementary polygons over the same nine points. Irregular on purpose —
+   uneven amplitudes and uneven spacing, because a split at a constant x offset is obviously a
+   straight edge that has been given a wobble, and a real break wanders. Swapped in only while
+   breaking, so the 1% rest overlap never has to line up with the jagged edge.
+*/
+.heart-breaking .heart-half.left {
+  clip-path: polygon(
+    0 0, 50% 0, 46.5% 11%, 53% 22%, 44.5% 35%, 55% 47%,
+    47% 58%, 53.5% 71%, 45.5% 84%, 51% 93%, 49% 100%, 0 100%
+  );
+  /* Both halves hinge at the heart's tip, which is where they are still joined when the fracture
+     starts. Pivoting on a half's own centre tucks its bottom corner ~97px across the gap, and
+     pivoting on the fracture itself tucks it ~168px — either way the pieces visibly close on each
+     other and the break reads as inward. At the tip the lobes splay ~368px apart while the bottom
+     corners stay put and everything falls. Same origin for both, because both boxes span the whole
+     heart. */
+  transform-origin: 50% 100%;
+  animation: heart-break-left 1250ms cubic-bezier(0.22, 0.61, 0.3, 1) forwards;
+}
+
+.heart-breaking .heart-half.right {
+  clip-path: polygon(
+    50% 0, 100% 0, 100% 100%, 49% 100%, 51% 93%, 45.5% 84%,
+    53.5% 71%, 47% 58%, 55% 47%, 44.5% 35%, 53% 22%, 46.5% 11%
+  );
+  transform-origin: 50% 100%;
+  animation: heart-break-right 1250ms cubic-bezier(0.22, 0.61, 0.3, 1) forwards;
+}
+
+/* The 26% hold is the whole point: the halves separate a little and stay legible, so the crack is
+   actually seen, before the long fade carries them away. Fading from frame zero reads as a plain
+   cross-dissolve with a wobble in it.
+   The drop accelerates (+3, +13, +18, +24px) because gravity does, and the opacity now falls away
+   over the last third instead of at the very end — the pieces disappear *while* still dropping,
+   which is what reads as "fell off" rather than "stopped and faded". The two halves are
+   deliberately not mirror images: unequal mass, unequal tumble. */
+@keyframes heart-break-left {
+  0% {
+    transform: translate(0, 0) rotate(0deg);
+    opacity: 1;
+  }
+  26% {
+    transform: translate(-6px, 3px) rotate(-5deg);
+    opacity: 1;
+  }
+  58% {
+    transform: translate(-14px, 16px) rotate(-15deg);
+    opacity: 0.85;
+  }
+  82% {
+    transform: translate(-22px, 34px) rotate(-27deg);
+    opacity: 0.35;
+  }
+  100% {
+    transform: translate(-27px, 58px) rotate(-40deg);
+    opacity: 0;
+  }
+}
+
+@keyframes heart-break-right {
+  0% {
+    transform: translate(0, 0) rotate(0deg);
+    opacity: 1;
+  }
+  26% {
+    transform: translate(6px, 3px) rotate(5deg);
+    opacity: 1;
+  }
+  58% {
+    transform: translate(15px, 15px) rotate(17deg);
+    opacity: 0.85;
+  }
+  82% {
+    transform: translate(24px, 32px) rotate(31deg);
+    opacity: 0.35;
+  }
+  100% {
+    transform: translate(30px, 54px) rotate(44deg);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .heart-breaking .heart-half {
+    animation: none;
+    opacity: 1;
+  }
+}
+
+html[data-low-power] .heart-breaking .heart-half {
+  animation: none;
+  opacity: 1;
+}
+
+/* The tap on the heart: overshoot and settle, so liking something is felt
+   rather than merely observed. */
+@keyframes heart-pop {
+  0% {
+    transform: scale(1);
+  }
+  35% {
+    transform: scale(1.4) rotate(-7deg);
+  }
+  65% {
+    transform: scale(0.9) rotate(4deg);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.heart-pop {
+  animation: heart-pop 440ms var(--ease-spring);
+}
+
+/*
+   The same gesture at the size the fullscreen artwork and the desktop card use.
+
+   The 440ms pop above overshoots to 1.4 and rotates — right for a 24px glyph, where the movement is
+   mostly felt rather than seen. Scaled to a 150px heart the same overshoot throws the shape outside
+   the sleeve and the wiggle reads as cartoonish, so the large variant travels less far, settles in
+   more beats, and drops the rotation.
+*/
+@keyframes heart-pop-lg {
+  0% {
+    transform: scale(1);
+  }
+  30% {
+    transform: scale(1.26);
+  }
+  55% {
+    transform: scale(0.93);
+  }
+  76% {
+    transform: scale(1.07);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.heart-pop-lg {
+  animation: heart-pop-lg 520ms var(--ease-spring);
+}
+
+/*
+   Transport state confirmations.
+
+   Each fires once, on the click that changes the state, then stops — the glyph settles back into its
+   resting shape instead of carrying a permanent animation. None of them need a JS guard: the class is
+   held only for the animation's length, and the pair of rules under each one collapses it to a plain
+   state change under Reduced Motion / Low Power, which is the same arrangement `heart-pop` uses.
+*/
+
+/*
+   Shuffle: the two arrow paths sweep past one another.
+
+   Travelling right while squashing on X is what makes this read as two routes exchanging places
+   rather than the icon being nudged sideways. 280ms is the compromise: long enough for the crossing
+   to be seen at the transport's 20px, short enough that hammering the button never overlaps itself.
+*/
+@keyframes shuffle-cross {
+  0% {
+    transform: translateX(0) scaleX(1);
+  }
+  34% {
+    transform: translateX(-2.4px) scaleX(0.86);
+  }
+  68% {
+    transform: translateX(2.4px) scaleX(0.86);
+  }
+  100% {
+    transform: translateX(0) scaleX(1);
+  }
+}
+
+.shuffle-cross {
+  animation: shuffle-cross 280ms var(--ease-spring);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shuffle-cross {
+    animation: none;
+  }
+}
+
+html[data-low-power] .shuffle-cross {
+  animation: none;
+}
+
+/*
+   Repeat: one full turn and stop.
+
+   A whole 360 rather than a partial wiggle, because the control cycles through three states and a
+   complete revolution reads as "the loop advanced" where a wobble reads as a glitch. `--ease-out` is
+   weighted hard at the tail so it lands rather than drifts, and the class is cleared at the end so
+   the resting glyph is never left rotated.
+*/
+@keyframes repeat-turn {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.repeat-turn {
+  animation: repeat-turn 380ms var(--ease-out);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .repeat-turn {
+    animation: none;
+  }
+}
+
+html[data-low-power] .repeat-turn {
+  animation: none;
+}
+
+/*
+   Settings: the mixer's knobs slide.
+
+   The original ask was a gear rotation, but there is no gear here — the glyph is deliberately a mixer
+   (see icons.ts), and rotating one reads as a broken control rather than "a panel just opened". The
+   equivalent that stays inside the icon's own language is the knobs moving along their tracks and
+   settling back. They alternate direction so it reads as settings having changed rather than as the
+   whole glyph being shoved sideways, and the 45ms stagger is what makes it a cascade.
+*/
+@keyframes knob-slide {
+  0% {
+    transform: translateX(0);
+  }
+  38% {
+    transform: translateX(1.9px);
+  }
+  100% {
+    transform: translateX(0);
+  }
+}
+
+@keyframes knob-slide-back {
+  0% {
+    transform: translateX(0);
+  }
+  38% {
+    transform: translateX(-1.9px);
+  }
+  100% {
+    transform: translateX(0);
+  }
+}
+
+/* Paths 2, 5 and 8 of the mixer are the closed knob circles; the rest are the tracks. */
+.mixer-nudge .p2,
+.mixer-nudge .p8 {
+  animation: knob-slide 320ms var(--ease-spring);
+}
+
+.mixer-nudge .p5 {
+  animation: knob-slide-back 320ms var(--ease-spring) 45ms;
+}
+
+.mixer-nudge .p8 {
+  animation-delay: 90ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mixer-nudge .p2,
+  .mixer-nudge .p5,
+  .mixer-nudge .p8 {
+    animation: none;
+  }
+}
+
+html[data-low-power] .mixer-nudge .p2,
+html[data-low-power] .mixer-nudge .p5,
+html[data-low-power] .mixer-nudge .p8 {
+  animation: none;
+}
+
+/*
+   Library: the glyph falls into place.
+
+   The ask was books physically toppling, which needs a multi-part icon; this set's library mark is
+   three strokes on one path list, so the honest equivalent is the whole glyph arriving from above and
+   settling. `--ease-spring` supplies the overshoot, which is what makes it land rather than glide.
+*/
+@keyframes nav-drop {
+  0% {
+    transform: translateY(-3.5px) scale(0.88);
+  }
+  100% {
+    transform: translateY(0) scale(1);
+  }
+}
+
+.nav-drop {
+  animation: nav-drop 380ms var(--ease-spring);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nav-drop {
+    animation: none;
+  }
+}
+
+html[data-low-power] .nav-drop {
+  animation: none;
+}
+
+/*
+   Peer dimming.
+
+   In the reference the transport does not glow by adding light to the button under the pointer — it
+   glows by taking light away from everything else, so the live glyph is the only thing at full ink
+   and its stillness reads as a bloom against the dimmed row. Reproducing only the bright half (a
+   hover colour change) gets a normal button; this is the half that actually creates the effect.
+
+   Direct children only, so a cluster nested in a cluster does not dim its own container. The class is
+   opt-in rather than implied by the hover: the fullscreen transport sits inside `.inart`, which is
+   itself a direct child of the hovered `.art-zone`, so a rule that fired on any ancestor hover dimmed
+   all five glyphs as soon as the sleeve was pointed at — the opposite of the effect it exists for.
+*/
+.cluster:hover > :not(:hover) {
+  opacity: 0.42;
+}

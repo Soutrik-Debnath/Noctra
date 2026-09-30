@@ -1,0 +1,90 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>icon preview</title>
+    <style>
+      body { margin: 0; font: 12px system-ui, sans-serif; background: #222; color: #ddd; }
+      .row { display: flex; align-items: flex-end; gap: 18px; padding: 18px; }
+      .dark { background: #1b1b1f; }
+      .light { background: #f3f3f5; }
+      .bar { background: #101014; padding: 10px 18px; display: flex; gap: 14px; align-items: center; }
+      figure { margin: 0; text-align: center; }
+      figcaption { font-size: 10px; opacity: 0.6; margin-top: 4px; }
+      img { display: block; image-rendering: auto; }
+    </style>
+  </head>
+  <body>
+    <div class="row dark" id="dark"></div>
+    <div class="row light" id="light"></div>
+    <div class="bar" id="bar"></div>
+    <div class="row dark" id="zoom"></div>
+    <canvas id="c" width="1024" height="1024" style="display: none"></canvas>
+    <script type="module">
+      const SIZES = [128, 48, 32, 24, 16];
+      const src = await (await fetch("/docs/icon/noctra-icon.svg")).text();
+      const url = "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(src)));
+
+      const load = () =>
+        new Promise((res, rej) => {
+          const i = new Image();
+          i.onload = () => res(i);
+          i.onerror = rej;
+          i.src = url;
+        });
+
+      const img = await load();
+      for (const host of ["dark", "light"]) {
+        for (const s of SIZES) {
+          const f = document.createElement("figure");
+          const im = document.createElement("img");
+          im.src = url;
+          im.width = s;
+          im.height = s;
+          const cap = document.createElement("figcaption");
+          cap.textContent = s + "px";
+          f.append(im, cap);
+          document.getElementById(host).append(f);
+        }
+      }
+      // a mock taskbar strip: 24px icon on the Windows 11 dark bar
+      for (const s of [24, 32]) {
+        const im = document.createElement("img");
+        im.src = url;
+        im.width = s;
+        im.height = s;
+        document.getElementById("bar").append(im);
+      }
+
+      /* Magnified pixels. A 16px icon cannot be judged by looking at a 16px dot on a
+         900px screenshot — it has to be scaled up with smoothing off so the actual raster
+         is what is being read. */
+      for (const s of [16, 24, 32]) {
+        /* Two steps: rasterise at exactly s px first, then blow that raster up 8x with
+           smoothing off. Scaling 1024 -> s*8 in one go would resample and hide the very
+           aliasing this is here to inspect. */
+        const small = document.createElement("canvas");
+        small.width = small.height = s;
+        small.getContext("2d").drawImage(img, 0, 0, s, s);
+        const cv = document.createElement("canvas");
+        cv.width = s * 8;
+        cv.height = s * 8;
+        const cc = cv.getContext("2d");
+        cc.imageSmoothingEnabled = false;
+        cc.drawImage(small, 0, 0, s, s, 0, 0, s * 8, s * 8);
+        const f = document.createElement("figure");
+        const cap = document.createElement("figcaption");
+        cap.textContent = s + "px @8x";
+        f.append(cv, cap);
+        cv.style.border = "1px solid #444";
+        document.getElementById("zoom").append(f);
+      }
+
+      const ctx = document.getElementById("c").getContext("2d");
+      ctx.clearRect(0, 0, 1024, 1024);
+      ctx.drawImage(img, 0, 0, 1024, 1024);
+      window.__png = document.getElementById("c").toDataURL("image/png");
+      window.__ready = true;
+    </script>
+  </body>
+</html>

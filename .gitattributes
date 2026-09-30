@@ -1,0 +1,35 @@
+# Line endings and binary handling. Committed on purpose: this is the setting that makes the
+# repo behave identically on the machine that clones it, which `core.autocrlf` cannot do because it
+# lives in each person's own config.
+#
+# Why it was needed here: Git for Windows ships `core.autocrlf=true` in its system config, which
+# writes CRLF into the working copy while storing LF in the repository. The result was git warning
+# "LF will be replaced by CRLF the next time Git touches it" on almost every status run, and a
+# 77-LF / 36-CRLF split across the files on disk. `eol=lf` overrides that per-repo, so the working
+# copy stops being rewritten and a Linux or macOS contributor does not show up as having changed
+# every line in the project.
+
+* text=auto eol=lf
+
+# Never run line-ending conversion over these. Rewriting a byte inside an image, font or audio
+# file corrupts it silently — it still opens, and it is just wrong.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ico binary
+*.icns binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.otf binary
+*.mp4 binary
+*.mp3 binary
+*.flac binary
+
+# Generated files. Marked so GitHub collapses them in a pull request diff instead of burying the
+# real change under 100k lines of lockfile.
+package-lock.json linguist-generated
+src-tauri/Cargo.lock linguist-generated
+src-tauri/gen/** linguist-generated

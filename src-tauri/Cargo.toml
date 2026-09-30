@@ -1,0 +1,58 @@
+[package]
+name = "noctra"
+version = "1.0.0"
+description = "Noctra - offline-first music player"
+authors = ["soutr"]
+edition = "2021"
+
+# The `_lib` suffix keeps the lib name distinct from the binary name.
+# This is required on Windows; see https://github.com/rust-lang/cargo/issues/8519
+[lib]
+name = "noctra_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = ["protocol-asset"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+# Audio tags, embedded artwork and stream properties. Deliberately in Rust: JS tag libraries are
+# unreliable for FLAC/OGG cover art.
+lofty = "0.25"
+tauri-plugin-dialog = "2"
+percent-encoding = "2"
+http = "1"
+
+[target.'cfg(windows)'.dependencies]
+# Native taskbar thumbnail toolbar. Version pinned to what Tauri already resolves, so no second
+# copy of the crate is compiled.
+windows = { version = "0.61", features = [
+  "Win32_Foundation",
+  "Win32_System_Com",
+  "Win32_UI_Shell",
+  "Win32_UI_WindowsAndMessaging",
+] }
+
+# `tauri dev` runs the debug profile, and an untuned debug build filled target/ with 12 GB of
+# CodeView info - almost all of it from dependency crates. Dropping their debug info entirely, and
+# narrowing our own to line tables, keeps a panic reporting file:line while reclaiming ~9 GB.
+# Runtime behaviour, features and appearance are unaffected; only the debugger sees less.
+[profile.dev]
+debug = "line-tables-only"
+
+[profile.dev.package."*"]
+debug = false
+
+# Size optimisations from https://tauri.app/concept/size/#cargo-configuration
+[profile.release]
+codegen-units = 1
+# Fat LTO (`true`) held the whole crate graph in one link and took ~95 minutes on this machine,
+# which makes every icon or Rust tweak an hour-and-a-half. Thin LTO keeps the cross-crate inlining
+# that matters and links in a fraction of the time, for a slightly larger exe.
+# Revert to `true` only if shipping the last kilobyte ever becomes the priority.
+lto = "thin"
+opt-level = 3
+panic = "abort"
+strip = true

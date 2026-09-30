@@ -1,0 +1,10 @@
+/* Manrope v20 (c) The Manrope Project Authors, licensed under the SIL Open Font License 1.1.
+   Self-hosted rather than loaded from Google Fonts because Noctra must run with no network at all.
+   One variable file covers 400-800, which is the whole weight range the UI uses. */
+@font-face {
+  font-family: "Manrope";
+  font-style: normal;
+  font-weight: 400 800;
+  font-display: block;
+  src: url("./manrope-var.woff2") format("woff2");
+}

@@ -1,0 +1,440 @@
+/* ============================================================
+   Noctra — shared control primitives
+   Buttons, sliders, cards, list rows and chips that more than one view uses.
+   Kept out of app.css so that file stays tokens-and-foundations.
+   ============================================================ */
+
+/* ------------------------------------------------------------
+   Text buttons
+   Flat and solid. The previous pass painted a white-to-transparent gradient
+   across every button, which is the single thing that made them look
+   homemade. Hover lifts by a pixel and brightens the border; the fill never
+   becomes a gradient.
+   ------------------------------------------------------------ */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: var(--sp-10);
+  padding: 0 var(--sp-5);
+  border-radius: var(--radius-pill);
+  font-size: var(--fs-base);
+  font-weight: 700;
+  letter-spacing: 0.1px;
+  white-space: nowrap;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background-color: rgba(255, 255, 255, 0.09);
+  color: var(--text);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  transition:
+    transform var(--tap) var(--ease-out),
+    background-color var(--tap) var(--ease-out),
+    border-color var(--tap) var(--ease-out),
+    box-shadow var(--tap) var(--ease-out),
+    color var(--tap) var(--ease-out),
+    opacity var(--tap) var(--ease-out);
+}
+
+.btn:hover:not(:disabled) {
+  background-color: rgba(255, 255, 255, 0.14);
+  border-color: rgba(255, 255, 255, 0.4);
+  transform: translateY(-1px);
+}
+
+.btn:active:not(:disabled) {
+  transform: scale(0.96);
+  opacity: 0.85;
+}
+
+.btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.btn-primary {
+  background-color: var(--accent);
+  border-color: rgba(255, 255, 255, 0.4);
+  color: var(--on-accent);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.4),
+    0 6px 22px -8px rgb(var(--accent-rgb) / 0.8);
+  /* This list replaces `.btn`'s rather than adding to it, so anything `.btn` covers has to be
+     repeated here or the primary button loses it. `opacity` was missing, which is why pressing a
+     primary button snapped to 0.85 while every other button in the app eased. The two 500ms entries
+     are for the per-track accent crossfade, not for the press. */
+  transition:
+    transform var(--tap) var(--ease-out),
+    background-color 500ms var(--ease-out),
+    border-color var(--tap) var(--ease-out),
+    box-shadow 500ms var(--ease-out),
+    opacity var(--tap) var(--ease-out);
+}
+
+.btn-primary:hover:not(:disabled) {
+  /* Same fill. Only the ring and the lift change, so hovering never recolours
+     the primary action. */
+  background-color: var(--accent);
+  border-color: rgba(255, 255, 255, 0.75);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.5),
+    0 10px 28px -8px rgb(var(--accent-rgb) / 1);
+}
+
+.btn-sm {
+  height: 32px;
+  padding: 0 14px;
+  font-size: var(--fs-sm);
+}
+
+.btn-danger {
+  border-color: rgb(var(--love-rgb) / 0.4);
+  color: #ffb3b8;
+  background-color: rgb(var(--love-rgb) / 0.12);
+}
+
+.btn-danger:hover:not(:disabled) {
+  background-color: rgb(var(--love-rgb) / 0.2);
+  border-color: rgb(var(--love-rgb) / 0.65);
+}
+
+/* Solid raised content card. Large areas use this rather than glass: a big
+   translucent panel over a busy cover reads as frosted plastic. */
+.card {
+  background: var(--card);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-panel);
+  box-shadow: var(--elev-2);
+}
+
+/* ------------------------------------------------------------
+   Sliders
+   Noctis draws its sliders from stacked rounded rectangles and lays a fully
+   transparent native input over the top for hit-testing. That is the right call
+   twice over: the native `accent-color` thumb shrinks to whatever width you
+   give the element, which turned the vertical volume control into a dot, and
+   the accent-tinted native control flashed white for a frame every time the
+   per-track accent changed.
+   ------------------------------------------------------------ */
+
+.slider {
+  position: relative;
+  height: 22px;
+  cursor: pointer;
+}
+
+.slider-track {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 5px;
+  margin-top: -2.5px;
+  border-radius: var(--radius-pill);
+  background: rgba(255, 255, 255, 0.18);
+  box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.4);
+}
+
+.slider-fill {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  height: 5px;
+  margin-top: -2.5px;
+  border-radius: var(--radius-pill);
+  background: var(--accent);
+  box-shadow: 0 0 12px -2px rgb(var(--accent-rgb) / 0.8);
+  transition: background-color 500ms var(--ease-out);
+}
+
+.slider-thumb {
+  position: absolute;
+  top: 50%;
+  width: 13px;
+  height: 13px;
+  margin: -6.5px 0 0 -6.5px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: var(--elev-1);
+  transition: transform var(--tap) var(--ease-out);
+}
+
+.slider:hover .slider-thumb,
+.slider:focus-within .slider-thumb {
+  transform: scale(1.22);
+}
+
+/* The real input: invisible, on top, and deliberately outside the pointer path. It is horizontal
+   whatever box it is stretched into, so a vertical rail driven by it would map the value across the
+   control's ~26px width instead of its ~130px height. `sliderPointer` resolves presses against the
+   declared axis; this element keeps focus, arrow keys and the accessible value. */
+.slider input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+  pointer-events: none;
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  border: none;
+}
+
+/* Vertical geometry, for the rail on the artwork's right edge. */
+.slider-v {
+  width: 22px;
+  height: 120px;
+}
+
+.slider-v .slider-track {
+  left: 50%;
+  right: auto;
+  top: 0;
+  bottom: 0;
+  width: 5px;
+  height: auto;
+  margin: 0 0 0 -2.5px;
+}
+
+.slider-v .slider-fill {
+  left: 50%;
+  top: auto;
+  bottom: 0;
+  width: 5px;
+  height: 50%;
+  margin: 0 0 0 -2.5px;
+}
+
+.slider-v .slider-thumb {
+  left: 50%;
+  top: 50%;
+  margin: -6.5px 0 0 -6.5px;
+}
+
+/* ---- Glass variant: for a slider that sits on top of artwork ------------------
+   A solid accent fill over a cover reads as a sticker laid on the picture. This
+   makes the unfilled channel a frosted tube the art shows through, and the filled
+   part white rather than coloured, so the level is legible on any cover. */
+.slider-glass .slider-track {
+  background: rgba(255, 255, 255, 0.18);
+  backdrop-filter: var(--glass-filter-clear);
+  -webkit-backdrop-filter: var(--glass-filter-clear);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.34),
+    inset 0 -2px 4px -2px rgba(0, 0, 0, 0.5);
+}
+
+.slider-glass .slider-fill {
+  /* Frosted, not painted. Near-opaque white reads as a solid bar laid over the cover; this lets the
+     artwork come through the filled portion too, so the whole channel is one piece of glass with the
+     level shown by brightness rather than by coverage. */
+  background: linear-gradient(
+    to top,
+    rgba(255, 255, 255, 0.42),
+    rgba(255, 255, 255, 0.26)
+  );
+  backdrop-filter: blur(6px) saturate(1.6);
+  -webkit-backdrop-filter: blur(6px) saturate(1.6);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.34),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+
+.slider-glass .slider-thumb {
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow:
+    0 1px 6px rgba(0, 0, 0, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+.slider:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/* ------------------------------------------------------------
+   Shared list row and section furniture
+   Home, Library, Favorites and Playlists all render the same thing, so the
+   hover and now-playing states live once instead of being copied four times and
+   drifting apart.
+   ------------------------------------------------------------ */
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: 9px 12px;
+  border-radius: 12px;
+  border: 1px solid transparent;
+  text-align: left;
+  transition:
+    background-color var(--tap) var(--ease-out),
+    border-color var(--tap) var(--ease-out),
+    transform var(--tap) var(--ease-out);
+}
+
+.row:hover {
+  background-color: var(--card-hover);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.row:active {
+  transform: scale(0.995);
+}
+
+.row.active {
+  background-color: rgba(255, 255, 255, 0.11);
+  border-color: rgba(255, 255, 255, 0.18);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14);
+}
+
+.row-thumb {
+  width: 46px;
+  height: 46px;
+  border-radius: var(--radius-art);
+  object-fit: cover;
+  flex: none;
+  background: var(--surface-2);
+  box-shadow:
+    var(--elev-2),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+}
+
+.row-title {
+  font-size: var(--fs-md);
+  font-weight: 700;
+  letter-spacing: -0.1px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.row.active .row-title {
+  /* --accent, not --accent-text-as-ink: the row is glass over the current sleeve, so a red or orange
+     accent lands on a red or orange backdrop. Measured at 2.33:1 on "The Humma Song". The floored
+     variant keeps the hue as the now-playing signal and lifts it to 5.03:1 on that same pixel. */
+  color: var(--accent-text);
+  transition: color 500ms var(--ease-out);
+}
+
+.row-sub {
+  margin-top: 2px;
+  font-size: var(--fs-sm);
+  font-weight: 500;
+  color: var(--text-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Section heading. 22px bold is the reference's scale — anything smaller made a
+   page read as a settings list rather than a home screen. */
+.section-title {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: var(--fs-2xl);
+  font-weight: 800;
+  letter-spacing: -0.5px;
+}
+
+/* Small count chip, as used on the reference's Most Played lists. */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 9px;
+  border-radius: var(--radius-pill);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  color: var(--text-dim);
+  background: rgba(255, 255, 255, 0.09);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Rank numeral in a chart list. */
+.rank {
+  width: 26px;
+  flex: none;
+  font-size: var(--fs-lg);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-faint);
+  text-align: center;
+}
+
+/* Entrance for grids and lists. Cheap: opacity plus a few pixels of transform.
+
+   `backwards`, never `both`. Forward fill keeps the animation's end value applied for the life of
+   the element, and an animation declaration outranks a normal author declaration in the cascade —
+   so a filled entrance permanently owns `transform` and `opacity` and every hover lift and press
+   scale underneath it snaps instead of easing. Measured, not theorised: setting an inline
+   `transform: scale(0.97)` on a `.stagger > .artist` returned 0.97 on the very next read, while the
+   same write on an unanimated `.btn-primary` returned the identity matrix, i.e. the start of its
+   140ms transition. `rise` declares only a `from` keyframe, so its implicit end value *is* the
+   element's underlying style; dropping the forward fill changes nothing about how the entrance looks
+   and gives the hover states their transitions back. `backwards` is still needed for the delay, so
+   an item waits invisible rather than flashing in early. */
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+}
+
+.rise {
+  animation: rise var(--dur-panel) var(--ease-out) backwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ------------------------------------------------------------
+   Entrance cascade.
+
+   34ms per step is the cadence the motion guidance calls for (30-50ms): fast enough that a grid
+   still arrives as one gesture rather than a series of events, slow enough that the eye reads
+   order instead of a pop. Capped at the tenth child — past that the items are below the fold on
+   first paint, and a longer tail would leave the bottom of a grid arriving seconds after the top.
+
+   Deliberately nth-child rather than an index threaded through every each block: same result, and
+   it cannot drift out of sync with the markup.
+   ------------------------------------------------------------ */
+.stagger > * {
+  animation: rise var(--dur-panel) var(--ease-out) backwards;
+}
+
+.stagger > :nth-child(2) { animation-delay: 34ms; }
+.stagger > :nth-child(3) { animation-delay: 68ms; }
+.stagger > :nth-child(4) { animation-delay: 102ms; }
+.stagger > :nth-child(5) { animation-delay: 136ms; }
+.stagger > :nth-child(6) { animation-delay: 170ms; }
+.stagger > :nth-child(7) { animation-delay: 204ms; }
+.stagger > :nth-child(8) { animation-delay: 238ms; }
+.stagger > :nth-child(9) { animation-delay: 272ms; }
+.stagger > :nth-child(10) { animation-delay: 306ms; }
+.stagger > :nth-child(n + 11) { animation-delay: 340ms; }
+
+@media (prefers-reduced-motion: reduce) {
+  .stagger > * {
+    animation: none;
+  }
+}
+
+html[data-low-power] .stagger > * {
+  animation: none;
+}
